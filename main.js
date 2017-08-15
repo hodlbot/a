@@ -27,7 +27,7 @@ http.listen(port, function () {
 
 
 require('./settings.js')(); //Includes settings file.
-// let db = require('./db.js'); //Includes db.js
+let db = require('./db.js'); //Includes db.js
 
 
 let coinNames = [];
@@ -90,10 +90,39 @@ async function computePrices(data) {
                         });
                         for (let i = 0; i < arr.length; i++) {
                             for (let j = i + 1; j < arr.length; j++) {
-                                results.push(
-                                    {
+                                if (!isNaN(arr[i][0] / arr[j][0])) {
+                                    results.push(
+                                        {
+                                            coin: coin,
+                                            spread: arr[i][0] / arr[j][0],
+                                            market2: {
+                                                name: arr[i][1],
+                                                last: arr[i][0]
+                                            },
+                                            market1: {
+                                                name: arr[j][1],
+                                                last: arr[j][0]
+                                            }
+
+                                        },
+                                        {//TODO, shouldnt have to create duplicate object for same markets
+                                            coin: coin,
+                                            spread: arr[j][0] / arr[i][0],
+                                            market2: {
+                                                name: arr[j][1],
+                                                last: arr[j][0]
+                                            },
+                                            market1: {
+                                                name: arr[i][1],
+                                                last: arr[i][0]
+                                            }
+
+                                        }
+                                    );
+
+                                    db.insert({ // Fixme: this whole function runs every single time a market updates. Make sure db.insert only runs once per 10 seconds
                                         coin: coin,
-                                        spread: arr[i][0] / arr[j][0],
+                                        lastSpread: arr[i][0] / arr[j][0],
                                         market2: {
                                             name: arr[i][1],
                                             last: arr[i][0]
@@ -102,11 +131,10 @@ async function computePrices(data) {
                                             name: arr[j][1],
                                             last: arr[j][0]
                                         }
-
-                                    },
-                                    {//TODO, shouldnt have to create duplicate object for same markets
+                                    });
+                                    db.insert({
                                         coin: coin,
-                                        spread: arr[j][0] / arr[i][0],
+                                        lastSpread: arr[j][0] / arr[i][0],
                                         market2: {
                                             name: arr[j][1],
                                             last: arr[j][0]
@@ -115,22 +143,8 @@ async function computePrices(data) {
                                             name: arr[i][1],
                                             last: arr[i][0]
                                         }
-
-                                    }
-                                );
-                                
-                                // db.insert({
-                                //     coin: coin,
-                                //     lastSpread: arr[i][0] / arr[j][0],
-                                //     market1: {
-                                //         name: arr[i][1],
-                                //         last: arr[i][0]
-                                //     },
-                                //     market2: {
-                                //         name: arr[j][1],
-                                //         last: arr[j][0]
-                                //     }
-                                // })
+                                    })
+                                }
 
                             }
                         }
@@ -140,7 +154,6 @@ async function computePrices(data) {
                 results.sort(function (a, b) {
                     return a.spread - b.spread;
                 });
-                console.log('Finishing function...');
                 resolve();
             }
         })
@@ -148,7 +161,7 @@ async function computePrices(data) {
 
     await loopData();
 
-    console.log("Emitting Results...")
+    console.log("Emiting and saving results to database...")
 
     io.emit('results', results);
 }
