@@ -16,6 +16,9 @@
     "test": "node main",
     "start": "node main"
   },
+  "engines": {
+    "node": ">= 8.1.3"
+ },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/manu354/crypto-arbitrage.git"
